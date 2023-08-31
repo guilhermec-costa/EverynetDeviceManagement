@@ -1,10 +1,8 @@
-from functools import wraps
-from sre_constants import OPCODES
 from typing import List, Union, NoReturn
-from login import Login, error, warning, prLightPurple
-from requisitions import get_device
+from messages import Colors
 
 class userMenu:
+    messages = Colors()
     """
     Generates a user menu.
         Parameters:
@@ -47,13 +45,18 @@ class userMenu:
         
     def show(self):
         bar_size_to_display = self.__get_max_option_length
-        prLightPurple('=' * 3 * bar_size_to_display)
+        self.messages.prLightPurple('=' * 3 * bar_size_to_display)
         for idx, option in enumerate(self.menu_options):
-            error(f'{idx + 1})')
+            self.messages.error(f'{idx + 1})')
             print(end='')
             print(f'\033[1;37m{option}\033[m')
-        prLightPurple('=' * 3 * bar_size_to_display)
+        self.messages.prLightPurple('=' * 3 * bar_size_to_display)
     
+    
+    def validate_option(self, error):
+        if isinstance(error, ValueError):
+            self.messages.error('Type a valid integer!')
+
     def ask_option(self):
         while True:
             try:
@@ -61,7 +64,12 @@ class userMenu:
                 if 1 <= opc <= len(self.menu_options):
                     return opc
                 else:
-                    error(f'{opc} is not a valide option!')
-            except ValueError:
-                error('Type a valid integer!')
-
+                    self.messages.error(f'{opc} is not a valide option!')
+            
+            except Exception as error:
+                self.validate_option(error)
+                
+            except KeyboardInterrupt:
+                print('\nQuitting the program...')
+                exit()
+    
