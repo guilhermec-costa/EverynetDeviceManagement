@@ -47,8 +47,7 @@ class userMenu:
         bar_size_to_display = self.__get_max_option_length
         self.messages.prLightPurple('=' * 3 * bar_size_to_display)
         for idx, option in enumerate(self.menu_options):
-            self.messages.error(f'{idx + 1})')
-            print(end='')
+            self.messages.error(f'{idx + 1})', endline=True)
             print(f'\033[1;37m{option}\033[m')
         self.messages.prLightPurple('=' * 3 * bar_size_to_display)
     

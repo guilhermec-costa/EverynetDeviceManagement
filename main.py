@@ -37,14 +37,11 @@ def run_app():
                     device_created = device.create_device()
                     
                     print(device_created)
-                    messages.warning('This feature is not implemented yet!')
                 case 5:
                     device.create_multiple_devices()
-                    messages.warning('This feature is not implemented yet!')
 
         else:
             messages.warning('You must generate a token first!')
                     
-
 if __name__ == '__main__':
     run_app()

@@ -47,6 +47,7 @@ class Session:
 
 class Device(Session):
     all_devices = []
+    messages = Colors()
     
     def __init__(self):
         self.init_device = None
@@ -134,23 +135,44 @@ class Device(Session):
             else:
                 return
     
+    def manage_excelfile(self, file):
+        file._check_columns()
+        file._check_size()
+        if file.ok_columns and file.ok_size:
+            self.messages.prGreen('It is possible to use the sheet!')
+            self.messages.prLightPurple('File content previous')
+            print(file.content.head(5))
+        else:
+            self.messages.error('It is not possible to use the sheet!')
+
+    def manage_jsonfile(self, file):
+        pass
+
     def create_via_file(self):
         file_path = input('Type the file absolute path > ')
         file_instancy = File(file_path)
         print()
-        print('File content previous')
-        print(file_instancy.content)
-            
+        match file_instancy.extension:
+            case '.xlsx' | '.csv':
+                self.manage_excelfile(file_instancy)
+            case '.json':
+                self.manage_jsonfile(file_instancy)
+
         
-
-
     def create_multiple_devices(self):
         print('To create multiple devices, choose one of the options below ')
         file_menu = userMenu(['Manually', 'JSON file', 'CSV file', 'XLSX file', 'Back main menu'], key='file_menu')
         file_menu.show()
         
         opc = file_menu.ask_option()
-        self.create_via_file()
+        match opc:
+            case 1:
+                self.create_multiple_devices_mannualy()
+            case 2 | 3 | 4:
+                self.create_via_file()
+            case 5:
+                print('retornando')
+                return
 
     def create_device(self):
         for device in self.all_devices:
@@ -164,8 +186,6 @@ class File:
         self.extension = self._check_extension()
         self.content = self.read_file()
         self.is_able_to_create = False
-        if self.extension in ('.xlsx', '.csv'):
-            self._check_columns()
     
     def _check_extension(self):
         extension = os.path.splitext(self.path)[1]
@@ -177,19 +197,19 @@ class File:
                 case '.json':
                     content = pd.read_json(rf'{self.path}')
                 case '.xlsx':
-                    content = pd.read_excel(rf'{self.path}')         
+                    content = pd.read_excel(rf'{self.path}')
+                    print(content.columns)         
                 case '.csv':
                     content = pd.read_csv(rf'{self.path}')
             return content
-        except FileNotFoundError:
+        except (FileNotFoundError, UnboundLocalError):
             self.messages.error('File does not exist in your operation system!')
         
-        except UnboundLocalError:
-            self.messages.warning('Verify the file extension!')
     
     def _check_columns(self):
         self.content.columns = [col.strip().lower().replace(' ', '_')\
                                         for col in self.content.columns]
+        
         mandatory_columns = {
             'dev_eui':0,
             'app_eui':0,
@@ -198,16 +218,22 @@ class File:
             'appskey':0
         }
         
-        if self.extension in ('.csv', '.xlsx'):
-            for column in self.content.columns:
-                if column in mandatory_columns.keys():
-                    mandatory_columns[column] += 1
+        for column in self.content.columns:
+            if column in mandatory_columns.keys():
+                mandatory_columns[column] += 1
         
+        self.messages.prLightPurple('-' * 30)
         print('Checking existing columns...')
         for column, value in mandatory_columns.items():
             print(f'"{column}" is ', end='')
-            if value == 0:
+            if value == 1:
                 self.messages.prGreen('OK')
             else:
                 self.messages.error('MISSING\n')
                 self.is_able_to_create = False
+        self.messages.prLightPurple('-' * 30)
+        self.ok_columns = False
+
+    def _check_size(self):
+        self.ok_size = True if self.content.shape[0] >= 1 \
+        else False
