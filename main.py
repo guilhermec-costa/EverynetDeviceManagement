@@ -1,17 +1,19 @@
 from menu import userMenu
-from session import Session, Device
+from session import Session
 from messages import Colors
+from devices import Device
 
 def run_app():
     messages = Colors()
     token = None
-    messages.prLightPurple('*' * 2 * len('Seja Bem Vindo'))
-    messages.warning(f'{"Your welcome!":^30}')
-    messages.prLightPurple('*' * 2 * len('Seja Bem Vindo'))
+    messages.prPurple('*' * 32)
+    messages.warning(f'\033[1;95;40m*\033[m\033[1;30;47m{"You are welcome!":^30}\033[00m\033[1;95;40m*\033[m')
+    messages.prPurple('*' * 32)
     print()
 
     while True:
-        menu = userMenu(['Get API token', 'Get single device', 'Get multiple devices', 'Create single device', 'Create multiple devices', 'Quit'], key='main_menu')
+        menu = userMenu(['Get API token', 'Get single device', 'Get multiple devices', 'Create single device', 'Create multiple devices',
+                         'Edit single device', 'Edit multiple devices', 'Delete single device', 'Delete multiple devices', 'Quit'], key='main_menu')
         menu.show()
         opc = menu.ask_option()
         if opc == 1:
@@ -19,8 +21,8 @@ def run_app():
             token = session.get_token()
             if token is not None:
                 messages.prGreen(f'Your token: {token}')
-        if opc == 6:
-            print('Quitting the programm...')
+        if opc == 10:
+            messages.prLightPurple('\nThank you for use!\nQuitting the program...')
             exit()
 
         if token is not None:
@@ -41,6 +43,14 @@ def run_app():
                     
                 case 5:
                     device.create_multiple_devices()
+                case 6:
+                    messages.warning('Editing a single device!')
+                case 7:
+                    messages.warning('Editing multiple devices!')
+                case 8:
+                    messages.warning('Deleting a single device!')
+                case 9:
+                    messages.warning('Deleting multiple devices!')
 
         else:
             messages.warning('You must generate a token first!')

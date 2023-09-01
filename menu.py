@@ -45,11 +45,19 @@ class userMenu:
         
     def show(self):
         bar_size_to_display = self.__get_max_option_length
-        self.messages.prLightPurple('=' * 3 * bar_size_to_display)
+        self.messages.prPurple('=' * 3 * bar_size_to_display)
         for idx, option in enumerate(self.menu_options):
-            self.messages.error(f'{idx + 1})', endline=True)
-            print(f'\033[1;37m{option}\033[m')
-        self.messages.prLightPurple('=' * 3 * bar_size_to_display)
+            # self.messages.error(f'{idx + 1})', endline=True)
+            # print(f'\033[1;37m{option}\033[m   |')
+            if option.lower().__contains__('get'):
+                print(f'\033[1;30;46m{f"{idx + 1})":<3}\033[00m\033[1;30;46m{option:<28}|\033[000m ')
+            if option.lower().__contains__('edit'):
+                print(f'\033[1;30;43m{f"{idx + 1})":<3}\033[00m\033[1;30;43m{option:<28}|\033[000m ')
+            if option.lower().__contains__('create'):
+                print(f'\033[1;30;42m{f"{idx + 1})":<3}\033[00m\033[1;30;42m{option:<28}|\033[000m ')
+            if option.lower().__contains__('delete') or option.lower().__contains__('quit'):
+                print(f'\033[1;30;41m{f"{idx + 1})":<3}\033[00m\033[1;30;41m{option:<28}|\033[000m ')
+        self.messages.prPurple('=' * 3 * bar_size_to_display)
     
     
     def validate_option(self, error):
@@ -63,12 +71,12 @@ class userMenu:
                 if 1 <= opc <= len(self.menu_options):
                     return opc
                 else:
-                    self.messages.error(f'{opc} is not a valide option!')
+                    self.messages.error(f'{opc} is not a valid option!')
             
             except Exception as error:
                 self.validate_option(error)
                 
             except KeyboardInterrupt:
-                print('\nQuitting the program...')
+                self.messages.prLightPurple('\nThank you for use!\nQuitting the program...')
                 exit()
     

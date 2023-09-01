@@ -18,5 +18,5 @@ class Colors:
         else print(f"\033[1;92m{message}\033[00m", end=' ')
 
     def prPurple(self, message, endline=False):
-        print(f"\033[95m{message}\033[00m") if endline is False \
-        else print(f"\033[95m{message}\033[00m", end=' ')
+        print(f"\033[1;95m{message}\033[00m") if endline is False \
+        else print(f"\033[;;95m{message}\033[00m", end=' ')
