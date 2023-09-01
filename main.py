@@ -34,9 +34,11 @@ def run_app():
                     Device.display_devices(devices_info)
                 case 4:
                     device.build_device()
-                    device_created = device.create_device()
+                    device_created = device.create_single_device()
+                    if device_created is not None:
+                        messages.prGreen(f'{device.device_prototype["dev_eui"]} has been created!')
                     
-                    print(device_created)
+                    
                 case 5:
                     device.create_multiple_devices()
 

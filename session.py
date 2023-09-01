@@ -37,11 +37,11 @@ class Session:
         self.messages.error(f'Email or password incorret!')
         return None
     
-    def _check_request_status(self, request):
-        if request.status_code == 200:
+    def _check_request_status(self, request, code=200):
+        if request.status_code == code:
             return request.json()
         else:
-            self.messages.error(f'Error on get device info! ERROR >\n\n{request.text}\n')
+            self.messages.error(f'Requisition failed! ERROR >\n\n{request.text}\n')
         return None
 
 
@@ -50,7 +50,7 @@ class Device(Session):
     messages = Colors()
     
     def __init__(self):
-        self.init_device = None
+        self.ready_device = None
         self.device_prototype = None
         
     def get_device(self):
@@ -67,17 +67,26 @@ class Device(Session):
         return self._check_request_status(response)
 
     def get_multi_devices(self):
-        offset = int(input('Offset (min number to get) > '))
-        limit = int(input('Limit (max number to get) > '))
-        dynamic_url = f'/devices?offset={offset}&limit={limit}'
-        q_url = Session.base_url + dynamic_url
-        headers = {
-        'Authorization': f'Bearer {Session.token}',
-        'Cookie': f'session_token={Session.token}'
-        }
+        while True:
+            try:
+                offset = int(input('Offset (min number to get) > '))
+                limit = int(input('Limit (max number to get) > '))
+                dynamic_url = f'/devices?offset={offset}&limit={limit}'
+                q_url = Session.base_url + dynamic_url
+                headers = {
+                'Authorization': f'Bearer {Session.token}',
+                'Cookie': f'session_token={Session.token}'
+                }
 
-        response = requests.request('GET', url=q_url, headers=headers, data="")
-        return self._check_request_status(response)
+                response = requests.request('GET', url=q_url, headers=headers, data="")
+                return self._check_request_status(response)
+            except ValueError:
+                self.messages.error('Type a valid integer!')
+                self.messages.prPurple('*' * 25)
+                continue
+            except KeyboardInterrupt:
+                print('\nQuitting the program...')
+                exit()
 
     @classmethod
     def display_devices(cls, data):
@@ -89,36 +98,51 @@ class Device(Session):
                     cls.messages.prLightPurple('=========================')
                     cls.messages.warning(f'Device {counter} ({devices["dev_eui"]})')
                     for key, value in devices.items():
-                        cls.messages.prPurple(f'{key} -> ')
+                        cls.messages.prPurple(f'{key} -> ', endline=True)
                         print(value)
             else:
+                print('Device ', end='')
                 cls.messages.prLightPurple(data['device']['dev_eui'])
                 for key, value in data['device'].items():
-                        cls.messages.prPurple(f'{key} -> ')
+                        cls.messages.prPurple(f'{key} -> ', endline=True)
                         print(value)
 
-    def build_device(self):
+    def build_device(self, row=None):
+        self.messages.prPurple('*' * 30)
         device = self.generate_empty_device()
-        device['dev_eui'] = input('\033[1;96mDeveui > \033[00m')
-        device['app_eui'] = input('\033[1;96mAppeui > \033[00m')
         #device['tags'] = input('\033[1;96mTags (separate by commas) > \033[00m').split(',')
         #device['tags'] = [tags.strip(' ') for tags in device['tags']]
-        device['tags'] = 'TV_2'
+        device['tags'] = ['TV_2']
         device['activation'] = 'ABP'
         device['encryption'] = 'NS'
-        device['dev_addr'] = input('\033[1;96mDev address > \033[00m')
-        device['nwkskey'] = input('\033[1;96mNetwork secret key > \033[00m')
-        device['appskey'] = input('\033[1;96mApp secret key > \033[00m')
         device['dev_class'] = 'A'
-        device['counter_size'] = 4
         device['adr'] = {
-            'tx_power':30,
+            'tx_power':0,
             'datarate':0,
             'mode':'static'
         }
-        device['band'] = 'LA915-918A'
+        device['band'] = 'LA915-928A'
+        device['counters_size'] = 4
+        
+        # perguntas para o usuário dos valores não constantes, e caso não seja um upload de arquivo
+        if row is None:
+            device['dev_eui'] = input('\033[1;96mDeveui > \033[00m')
+            device['app_eui'] = input('\033[1;96mAppeui > \033[00m')
+            device['dev_addr'] = input('\033[1;96mDev address > \033[00m')
+            device['nwkskey'] = input('\033[1;96mNetwork secret key > \033[00m')
+            device['appskey'] = input('\033[1;96mApp secret key > \033[00m')
+            self.messages.prPurple('*' * 30)
+        else:
+            device['dev_eui'] = row.dev_eui
+            device['app_eui'] = row.app_eui
+            device['dev_addr'] = row.dev_addr
+            device['nwkskey'] = row.nwkskey
+            device['appskey'] = row.appskey
+        # prototype: versão dicionário
         self.device_prototype = device
-        self.init_device = json.dumps(device)
+        
+        #ready_device: versão json
+        self.ready_device = json.dumps(device)
         
         self.all_devices.append(self.device_prototype)
     
@@ -127,6 +151,10 @@ class Device(Session):
         while True:
             keep_creating = ""
             self.build_device()
+            device_created = self.create_single_device()
+            if device_created is not None:
+                self.messages.prGreen(f'{self.device_prototype["dev_eui"]} has been created!')
+                
             print('\033[1;96m====================\033[00m')
             while keep_creating not in ('Y', 'y', 'n', 'N'):
                 keep_creating = input('Create more devices: Y/n > ')
@@ -138,18 +166,35 @@ class Device(Session):
     def manage_excelfile(self, file):
         file._check_columns()
         file._check_size()
-        if file.ok_columns and file.ok_size:
+        if file.is_able_to_use:
+            file.adjust_content()
+            options = ""
             self.messages.prGreen('It is possible to use the sheet!')
             self.messages.prLightPurple('File content previous')
             print(file.content.head(5))
+            while options not in ('Y', 'y', 'n', 'N'):
+                confirmation = input('\033[1;93mAre you sure you want to create these devices: Y/n > \033[00m')
+                if confirmation in ('Y', 'y'):
+                    print('Creating devices!')
+                    for row in file.content.itertuples():
+                        self.build_device(row=row)
+                        device_created = self.create_single_device()
+                        if device_created is not None:
+                            self.messages.prGreen(f'{self.device_prototype["dev_eui"]} has been created!')
+
+                    return
+                else:
+                    return
         else:
             self.messages.error('It is not possible to use the sheet!')
+            return
 
     def manage_jsonfile(self, file):
-        pass
+        self.messages.warning('This feature is not implemented yet!')
+        return
 
-    def create_via_file(self):
-        file_path = input('Type the file absolute path > ')
+    def create_via_file(self, file_type):
+        file_path = input(f'Type the \033[1;92m{file_type}\033[00m absolute path > ')
         file_instancy = File(file_path)
         print()
         match file_instancy.extension:
@@ -169,15 +214,24 @@ class Device(Session):
             case 1:
                 self.create_multiple_devices_mannualy()
             case 2 | 3 | 4:
-                self.create_via_file()
+                self.create_via_file(file_type=file_menu.menu_options[opc-1])
             case 5:
                 print('retornando')
                 return
 
-    def create_device(self):
-        for device in self.all_devices:
-            print(f'Device {device["dev_eui"]} has been created!')
-            self.all_devices.remove(device)
+    def create_single_device(self):
+        dynamic_url = f"/devices"
+        q_url = self.base_url + dynamic_url
+        
+        payload = self.ready_device
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {Session.token}',
+            'Cookie': f'session_token={Session.token}'
+        }
+        response = requests.request('POST', url=q_url, headers=headers, data=payload)
+        return self._check_request_status(response, code=201)
+        
 
 class File:
     messages = Colors()
@@ -185,7 +239,6 @@ class File:
         self.path = path
         self.extension = self._check_extension()
         self.content = self.read_file()
-        self.is_able_to_create = False
     
     def _check_extension(self):
         extension = os.path.splitext(self.path)[1]
@@ -197,15 +250,16 @@ class File:
                 case '.json':
                     content = pd.read_json(rf'{self.path}')
                 case '.xlsx':
-                    content = pd.read_excel(rf'{self.path}')
-                    print(content.columns)         
+                    content = pd.read_excel(rf'{self.path}').head(5)
                 case '.csv':
                     content = pd.read_csv(rf'{self.path}')
             return content
         except (FileNotFoundError, UnboundLocalError):
-            self.messages.error('File does not exist in your operation system!')
+            self.messages.error('File does not exist in your operational system!')
         
-    
+    def adjust_content(self):
+        self.content['app_eui'] = self.content['app_eui'].astype(str)
+        
     def _check_columns(self):
         self.content.columns = [col.strip().lower().replace(' ', '_')\
                                         for col in self.content.columns]
@@ -229,11 +283,16 @@ class File:
             if value == 1:
                 self.messages.prGreen('OK')
             else:
-                self.messages.error('MISSING\n')
-                self.is_able_to_create = False
+                self.messages.error('MISSING')
         self.messages.prLightPurple('-' * 30)
-        self.ok_columns = False
+        self.ok_columns = False if 0 in mandatory_columns.values() else True
+
 
     def _check_size(self):
         self.ok_size = True if self.content.shape[0] >= 1 \
         else False
+        
+    @property
+    def is_able_to_use(self):
+        return True if self.ok_size and self.ok_columns \
+            else False
