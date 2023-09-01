@@ -28,6 +28,7 @@ def run_app():
             match opc:
                 case 2:
                     device_info = device.get_device()
+                    Device.display_devices(device_info)
                 case 3:
                     devices_info = device.get_multi_devices()
                     Device.display_devices(devices_info)

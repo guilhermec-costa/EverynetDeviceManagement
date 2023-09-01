@@ -81,13 +81,20 @@ class Device(Session):
     @classmethod
     def display_devices(cls, data):
         counter = 0
-        for devices in data['devices']:
-            counter +=1
-            cls.messages.prLightPurple('=========================')
-            cls.messages.warning(f'Device {counter} ({devices["dev_eui"]})')
-            for key, value in devices.items():
-                cls.messages.prPurple(f'{key} -> ')
-                print(value)
+        if data is not None:
+            if len(data) > 1:
+                for devices in data['devices']:
+                    counter +=1
+                    cls.messages.prLightPurple('=========================')
+                    cls.messages.warning(f'Device {counter} ({devices["dev_eui"]})')
+                    for key, value in devices.items():
+                        cls.messages.prPurple(f'{key} -> ')
+                        print(value)
+            else:
+                cls.messages.prLightPurple(data['device']['dev_eui'])
+                for key, value in data['device'].items():
+                        cls.messages.prPurple(f'{key} -> ')
+                        print(value)
 
     def build_device(self):
         device = self.generate_empty_device()
