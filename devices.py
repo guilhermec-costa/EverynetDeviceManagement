@@ -17,6 +17,7 @@ class Device(Session):
 
         self.messages.prLightPurple('*' * 30)
         deveui = input('Type a deveui > ')
+        input("Press enter to continue")
         self.messages.prLightPurple('...................')
         dynamic_url = Session.base_url + f'/devices/{deveui}?access_token={Session.token}'
         headers = {
@@ -68,7 +69,7 @@ class Device(Session):
                         cls.messages.prPurple(f'{key} -> ', endline=True)
                         print(value)
 
-    def build_device(self, row=None, ask_default_values=False):
+    def build_device(self, sheet:File = None, ask_default_values:bool = False):
         self.messages.prPurple('*' * 30)
         device = self.generate_empty_device()
 
@@ -101,7 +102,7 @@ class Device(Session):
             device['counters_size'] = 4
         
         # perguntas para o usuário dos valores não constantes, e caso não seja um upload de arquivo
-        if row is None:
+        if sheet is None:
             device['dev_eui'] = input('\033[1;96mDeveui > \033[00m')
             device['app_eui'] = input('\033[1;96mAppeui > \033[00m')
             device['dev_addr'] = input('\033[1;96mDev address > \033[00m')
@@ -109,11 +110,11 @@ class Device(Session):
             device['appskey'] = input('\033[1;96mApp secret key > \033[00m')
             self.messages.prPurple('*' * 30)
         else:
-            device['dev_eui'] = row.dev_eui
-            device['app_eui'] = row.app_eui
-            device['dev_addr'] = row.dev_addr
-            device['nwkskey'] = row.nwkskey
-            device['appskey'] = row.appskey
+            device['dev_eui'] = sheet.dev_eui
+            device['app_eui'] = sheet.app_eui
+            device['dev_addr'] = sheet.dev_addr
+            device['nwkskey'] = sheet.nwkskey
+            device['appskey'] = sheet.appskey
             
         # prototype: versão dicionário
         self.device_prototype = device
@@ -140,7 +141,7 @@ class Device(Session):
             else:
                 return
     
-    def manage_excelfile(self, file):
+    def manage_excelfile(self, file:File):
         file._check_columns()
         file._check_size()
         if file.is_able_to_use:
@@ -158,7 +159,6 @@ class Device(Session):
                         device_created = self.create_single_device()
                         if device_created is not None:
                             self.messages.prGreen(f'{self.device_prototype["dev_eui"]} has been created!')
-
                     return
                 else:
                     return
@@ -166,11 +166,11 @@ class Device(Session):
             self.messages.error('It is not possible to use the sheet!')
             return
 
-    def manage_jsonfile(self, file):
+    def manage_jsonfile(self, file: File):
         self.messages.warning('This feature is not implemented yet!')
         return
 
-    def create_via_file(self, file_type):
+    def create_via_file(self, file_type:str):
         file_path = input(f'Type the \033[1;92m{file_type}\033[00m absolute path > ')
         file_instancy = File(file_path)
         print()
@@ -193,7 +193,7 @@ class Device(Session):
             case 2 | 3 | 4:
                 self.create_via_file(file_type=file_menu.menu_options[opc-1])
             case 5:
-                print('retornando')
+                print('returning')
                 return
 
     def create_single_device(self, method='POST'):
@@ -212,3 +212,28 @@ class Device(Session):
     def edit_single_device(self):
         self.build_device(ask_default_values=input('Ask default values > '))
         self.create_single_device(method='PATCH')
+    
+    def ask_for_sure(self):
+        sure = ""
+        while sure not in ('Yes', 'Y', 'y', 'yes', 'No', 'n', 'N', 'NO'):
+            sure = input('\033[1;93mAre you sure you want to proceed: (Y/n)\033[00m ')
+        if sure in ('Y', 'y', 'Yes', 'yes'):
+            return True
+        return False
+            
+    def delete_single_device(self):
+        self.messages.prLightPurple('*' * 30)
+        deveui = input('Type a deveui > ')
+        self.messages.prLightPurple('...................')
+        dynamic_url = Session.base_url + f'/devices/{deveui}?access_token={Session.token}'
+        headers = {'Cookie': self.token}
+        
+        if self.ask_for_sure():
+            print('Deleting device!')
+            return
+        else:
+            print('Returning')
+            return
+        #     response = requests.request('DELETE', dynamic_url, headers=headers, data="")
+        #     return self._check_request_status(response, code=204)
+        # return

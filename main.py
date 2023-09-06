@@ -48,7 +48,7 @@ def run_app():
                 case 7:
                     messages.warning('Editing multiple devices!')
                 case 8:
-                    messages.warning('Deleting a single device!')
+                    device.delete_single_device()
                 case 9:
                     messages.warning('Deleting multiple devices!')
 
