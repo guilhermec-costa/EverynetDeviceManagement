@@ -10,6 +10,7 @@ class Session:
     base_url = 'https://ns.atc.everynet.io/api/v1.0'
     token = ""
     messages = Colors()
+    header = {'Cookie': f'session_token={token}'}
 
     def __init__(self):
         self.messages.prLightPurple('-' * 30)
@@ -30,6 +31,8 @@ class Session:
         response = requests.request("POST", q_url, headers=headers, data=payload)
         if response.status_code == 200:
             Session.token = response.json()['access_token']
+            self.token = Session.token
+            self.header['Cookie'] = f'session_token={self.token}'
             return Session.token
         
         self.messages.error(f'Email or password incorret!')
@@ -42,7 +45,7 @@ class Session:
         self.messages.prGreen(request_structure[request.status_code])
         return
         
-    def _check_request_status(self, request:requests.request, code:int = 200) -> json.loads | None:
+    def _check_request_status(self, request:requests.request, code:int = 200):
         if request.status_code == code:
             try:
                 return request.json()

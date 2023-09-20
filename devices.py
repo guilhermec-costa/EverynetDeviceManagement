@@ -4,14 +4,21 @@ import requests
 import json
 from files import File
 from menu import userMenu
+import pandas as pd
+import base64
 
-class Device(Session):
+class Device(Session, userMenu):
     all_devices = []
     messages = Colors()
     
     def __init__(self):
         self.ready_device = None
         self.device_prototype = None
+        self.__port_resume = {}
+        self.start_date = None
+        self.end_date = None
+        self.all_data = []
+        self.test = {}
         
     def get_device(self):
 
@@ -49,7 +56,96 @@ class Device(Session):
             except KeyboardInterrupt:
                 self.messages.prLightPurple('\nThank you for use!\nQuitting the program...')
                 exit()
-
+    
+    @staticmethod
+    def decode_uplink_port(payload_base64):
+        return base64.b64decode(payload_base64).hex()
+    
+    @staticmethod
+    def get_payload_from_uplinks(uplinks=[]):
+        """
+            Returns the complete payload of each uplink from a list of uplinks,
+            
+            Parameters:
+                    uplinks (list): a list of uplink messages
+            Returns:
+                (base64_payload, hex_payloads): base64 version of the payload, hexadecimal version of the payload
+        """   
+        hex_payloads = []
+        base64_payload = []
+        
+        for uplink in uplinks:
+            
+            # checks the port number of the uplink
+            if uplink['params']['port'] == 9:
+                hex_payload = Device.decode_uplink_port(uplink['params']['payload'])
+                hex_payloads.append(hex_payload)
+                base64_payload.append(uplink['params']['payload'])
+        return base64_payload, hex_payloads
+    
+    @staticmethod
+    def extract_coord_bits_from_payload(hex_payloads, base):
+        latitudes = []
+        longitudes = []
+        for payload in hex_payloads:
+            latitudes.append(bin(int(payload[4:10], base)))
+            longitudes.append(bin(int(payload[10:16], base)))
+        return latitudes, longitudes
+    
+    def extract_coordinates(binaries):
+        new_coordinates= []
+        for binaries_of24bits in binaries:
+            first_bit = binaries_of24bits[2]
+            
+            # checks if the binary is greater than 0b0
+            if len(binaries_of24bits) > 3:
+                if first_bit == '1':
+                    decimal_value = -int(binaries_of24bits[3:], base=2)
+                else:
+                    decimal_value = int(binaries_of24bits[3:], base=2)
+                new_coordinates.append(decimal_value/10**4) 
+                
+        return new_coordinates
+    # @staticmethod
+    # def extract_signal(payloads_in_bit):
+    #     mask = int('100000000000000000000000', 2)
+    #     results = []
+    #     for payload in payloads_in_bit:
+    #         results.append(bin(int(payload, 2) & mask))
+    #     return results
+        
+    def get_uplink_message(self):
+        while True:
+            self.messages.prLightPurple('*' * 30)
+            try:
+                start_date = str(input('Type the start date (yyyymmdd) > '))
+                #end_date = str(input('Type the end date (yyyymmdd) > '))
+                end_date = '20230918'
+                if all(len(date)==8 for date in [start_date, end_date]):
+                    self.start_date = start_date + '000000'
+                    self.end_date = end_date + '000000'
+                    break
+                else:
+                    self.messages.warning('Check if dates are in the correct format (yyyymmdd)')
+            except Exception as error:
+                self.validate_option(error)
+                continue
+                
+        deveui = input('Type a deveui > ')
+        while True:
+            try:
+                limit = int(input('Messages limit > '))
+                break
+            except Exception as error:
+                self.validate_option(error)
+            
+        input("Press enter to continue")
+        dynamic_url = Session.base_url + f'/history/data.json?access_token={Session.token}&from={self.start_date}&to={self.end_date}' \
+        f'&limit={limit}&devices={deveui}&types=uplink&duplicate=false'
+        print(dynamic_url)
+        response = requests.request('GET', dynamic_url, headers=self.header, data="")
+        return self._check_request_status(response)
+            
     @classmethod
     def display_devices(cls, data):
         counter = 0
@@ -68,6 +164,44 @@ class Device(Session):
                 for key, value in data['device'].items():
                         cls.messages.prPurple(f'{key} -> ', endline=True)
                         print(value)
+    
+    def __messages_resume(self, value):
+        if 'Port ' + str(value['port']) not in self.__port_resume.keys():
+            self.__port_resume[f'Port {value["port"]}'] = 0
+        self.__port_resume[f'Port {value["port"]}'] += 1
+        
+    
+    def __display_ports(self, ports):
+        self.messages.warning('---------- Port Resume ----------')
+        for key, value in ports.items():
+            self.messages.prLightPurple(f'{key}: ', endline=True)
+            print(value)
+        
+    def display_messages(self, data):
+        counter = 0
+        if data is not None:
+            if len(data) > 1:          
+                for message in data:
+                    counter += 1
+                    self.messages.prLightPurple('=========================')
+                    self.messages.warning(f'Message {counter}')
+                    for key, value in  message.items():
+                        self.all_data.append((key, value))
+                        if type(value) == dict:
+                            print('Dicionário')
+                        if key == 'params':
+                            self.__messages_resume(value)
+                        if key in ('params', 'meta'):
+                            for keyx, valuex in value.items():
+                                self.all_data.append([keyx, valuex])
+                        self.messages.prPurple(f'{key} -> ', endline=True)
+                        print(value)
+                    
+        self.messages.prLightPurple('=========================')
+        port_df = pd.DataFrame(self.all_data)
+        port_df.to_excel('Device_info.xlsx')
+        self.__display_ports(self.__port_resume)
+                                     
 
     def build_device(self, sheet:File = None, ask_default_values:bool = False):
         self.messages.prPurple('*' * 30)

@@ -64,6 +64,8 @@ class userMenu:
     def validate_option(self, error):
         if isinstance(error, ValueError):
             self.messages.error('Type a valid integer!')
+        else:
+            raise
 
     def ask_option(self):
         while True:

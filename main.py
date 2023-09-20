@@ -12,7 +12,7 @@ def run_app():
     print()
 
     while True:
-        menu = userMenu(['Get API token', 'Get single device', 'Get multiple devices', 'Create single device', 'Create multiple devices',
+        menu = userMenu(['Get API token', 'Get single device', 'Get multiple devices', 'Get uplink messages', 'Create single device', 'Create multiple devices',
                          'Edit single device', 'Edit multiple devices', 'Delete single device', 'Delete multiple devices', 'Quit'], key='main_menu')
         menu.show()
         opc = menu.ask_option()
@@ -21,7 +21,7 @@ def run_app():
             token = session.get_token()
             if token is not None:
                 messages.prGreen(f'Your token: {token}')
-        if opc == 10:
+        if opc == 11:
             messages.prLightPurple('\nThank you for use!\nQuitting the program...')
             exit()
 
@@ -35,21 +35,29 @@ def run_app():
                     devices_info = device.get_multi_devices()
                     Device.display_devices(devices_info)
                 case 4:
+                    device_messages = device.get_uplink_message()
+                    device.display_messages(device_messages)
+                    base64_payload, hex_payload = Device.get_payload_from_uplinks(device_messages)
+                    binary_lats, binary_longs = Device.extract_coord_bits_from_payload(hex_payload, 16)
+                    float_latitudes, float_longitudes = Device.extract_coordinates(binary_lats), Device.extract_coordinates(binary_longs)
+                    print(float_latitudes, float_longitudes)
+
+                case 5:
                     device.build_device()
                     device_created = device.create_single_device()
                     if device_created is not None:
                         messages.prGreen(f'{device.device_prototype["dev_eui"]} has been created!')
                     
                     
-                case 5:
-                    device.create_multiple_devices()
                 case 6:
-                    messages.warning('Editing a single device!')
+                    device.create_multiple_devices()
                 case 7:
-                    messages.warning('Editing multiple devices!')
+                    messages.warning('Editing a single device!')
                 case 8:
-                    device.delete_single_device()
+                    messages.warning('Editing multiple devices!')
                 case 9:
+                    device.delete_single_device()
+                case 10:
                     messages.warning('Deleting multiple devices!')
 
         else:
