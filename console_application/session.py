@@ -14,8 +14,8 @@ class Session:
 
     def __init__(self):
         self.messages.prLightPurple('-' * 30)
-        self.email = input('\nYour email > ')
-        self.pwd = getpass('Password > ')
+        self.email = "alberto.alexandre@nepen.org.br" #input('\nYour email > ')
+        self.pwd = "9dW5jW74qWfpiuQ" #getpass('Password > ')
         self.token = None
         return
     

@@ -212,6 +212,7 @@ class Device(Session, userMenu):
             device['activation'] = 'ABP'
             device['encryption'] = 'NS'
             device['dev_class'] = 'A'
+            device['block_downlink'] = True
             device['adr'] = {
                 # 30dBm
                 'tx_power':0,
@@ -226,6 +227,7 @@ class Device(Session, userMenu):
             device['activation'] = input('\033[1;96m Activation > \033[00m')
             device['encryption'] = 'NS'
             device['dev_class'] = 'A'
+            device['block_downlink'] = True
             device['adr'] = {
                 # 30dBm
                 'tx_power':0,
@@ -242,6 +244,7 @@ class Device(Session, userMenu):
             device['dev_addr'] = input('\033[1;96mDev address > \033[00m')
             device['nwkskey'] = input('\033[1;96mNetwork secret key > \033[00m')
             device['appskey'] = input('\033[1;96mApp secret key > \033[00m')
+            device['block_downlink'] = True
             self.messages.prPurple('*' * 30)
         else:
             device['dev_eui'] = sheet.dev_eui
@@ -249,6 +252,7 @@ class Device(Session, userMenu):
             device['dev_addr'] = sheet.dev_addr
             device['nwkskey'] = sheet.nwkskey
             device['appskey'] = sheet.appskey
+            device['block_downlink'] = True
             
         # prototype: versão dicionário
         self.device_prototype = device
@@ -289,7 +293,7 @@ class Device(Session, userMenu):
                 if confirmation in ('Y', 'y'):
                     print('Creating devices!')
                     for row in file.content.itertuples():
-                        self.build_device(row=row)
+                        self.build_device(sheet=row)
                         device_created = self.create_single_device()
                         if device_created is not None:
                             self.messages.prGreen(f'{self.device_prototype["dev_eui"]} has been created!')
